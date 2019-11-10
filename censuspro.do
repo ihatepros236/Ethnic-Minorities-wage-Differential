@@ -1,7 +1,7 @@
 clear
 *use "C:\Users\ahmad\Desktop\Econ 435\term paper\2011Census\nhs2011_pumf.dta"
 
-*STAT is dropping values with scientific notations such as exponential to solve that we are going to merge delimited file of data with our data file. 
+*STATA is dropping values with scientific notations such as exponential to solve that we are going to merge delimited file of data with our data file. 
 import delimited "C:\Users\ahmad\Desktop\Econ 435\term paper\2011Census\nhs2011_pumf.tab", case(upper)
 keep WAGES
 rename WAGES WAGE
@@ -12,23 +12,53 @@ drop if(COW>1)
 
 *defining depended variable log function of wage
 drop if (WAGE== 8888888|WAGE== 9999999)
+
+*Wage=1 not possible considering minimum wages, hence we will drop it,
+*it's probably because of age group of 15-17, which includes 15 year old(15 year old not allowed to legally work full time in Canada)
+drop if(WAGE==1|WAGE==0)
+
 label variable WAGE "Wages of Individuals"
 
-*My sample is people who worked full time full year only.
-drop if(WRKACT!=12) 
-summ WAGE
+*My sample is people who worked full time full year only. 
+*I am controlling for number of weeks worked too, to avoid variations in wages due to number of hours or week worked
+*I cannot stress this enough, My sample includes people who Worked 49 to 52 weeks full time.
+*Alternatively, I could have used "drop if (FPTWK!=1)"
+*but this would have only accounted for full time and part time not number of hours/weeks
 
-*We still have minimum value of wage as 1 which is resulting in 323 values of lwage as 0, this is very unlikely considering if a person work full time full year given minimum wage he can't earn 1$, the dataset has inaccuracies, also illegal income wouldn't show work hours on tax forms. 
+drop if(WRKACT!=11)
+
+summ WAGE
 
 gen LWAGE=log(WAGE)
 label variable LWAGE "log function of wages of individuals"
 tab LWAGE
 
-summ VISMIN
-label list VISMIN
+ 
+
+*Howerver you will notice that if I use full time full year (49-52 weeks), I will have  far more Females than males in my sample  
+
+*defining a variable for gender
+gen MALE=0
+replace MALE=1 if(SEX==2)
+label variable MALE "dummy variable if person's  Male"
+label define male 0 "Female" 1 "Male"
+label values MALE male
+tab MALE
+
 
 *dropping data which is not available for minority
 drop if VISMIN==14
+
+
+*Dummy variable for person being a visible minority
+
+gen ALLVMIN=0
+replace ALLVMIN=1 if(VISMIN!=13)
+label variable ALLVMIN "Dummy variable if a person is visible minority or not"
+label define allvmin 0 "White person" 1 "Visible minority"
+label values ALLVMIN allvmin
+tab ALLVMIN 
+  
 
 *defining South Asian (SA)  minority group variable
 gen S_A=0
@@ -67,7 +97,7 @@ tab FLP
 gen LA=0
 replace LA=1 if (VISMIN==5)
 label variable LA "dummy variable if person is Latin American or not"
-label define la 0 "Not Latin American" 1 " South Asian"
+label define la 0 "Not Latin American" 1 " Latin American"
 label values LA  la
 tab LA
 
@@ -146,27 +176,27 @@ tab MVM
 
 
 *defining a variable for Apprenticeship certificate and diploma level education
- gen A_DEDUC=0
-replace A_DEDUC=1 if(HDGREE==3|HDGREE==3)
-label variable A_DEDUC "dummy variable if person has diploma, apprenticeship or not"
+ gen ADEDUC=0
+replace ADEDUC=1 if(HDGREE==3|HDGREE==4)
+label variable ADEDUC "dummy variable if person has diploma, apprenticeship or not"
 label define dued 0 "No diploma nor Apprenticeship" 1 "Apprenticeship"
-label values A_DEDUC dued
-tab A_DEDUC
+label values ADEDUC dued
+tab ADEDUC
 
 *defining variable for college and university level education
 gen UEDUC=0
 replace UEDUC=1 if(inrange(HDGREE,5,10))
-label variable UEDUC "dummy variable if person has higher education than highschool or not"
-label define ued 0 "Educ < or = Highschool" 1 "Educ > Highschool"
-label values UEDUC hed
+label variable UEDUC "dummy variable if person has Undergraduate degree or diploma above undergraduate degree"
+label define ued 0 "No University/college Education" 1 "University college Education"
+label values UEDUC ued
 tab UEDUC
 
 *defining variable for which education achieved is Highschool diploma or equivalent
 
 gen HEDUC=0
 replace HEDUC=1 if(HDGREE==2)
-label variable HEDUC "dummy variable if person has higher education than highschool or not"
-label define hed 0 "Educ is Highschool" 1 "Educ not Highschool"
+label variable HEDUC "dummy variable if person has highschool education or not"
+label define hed 1 "Educ is Highschool" 0 "Educ not Highschool"
 label values HEDUC hed
 tab HEDUC
 
@@ -195,9 +225,18 @@ label define loced 0 "Educ achieved in Canada" 1 "Educ achieved outside CA"
 label values LOCED loced
 tab LOCED
 
+gen NED=0
+replace NED=1 if(LOC_ST_RES==4)
+label variable NED "dummy variable if person has no post secondary education"
+label define ned 1 "No post education achieved" 0 "post education achieved"
+label values NED ned
+tab NED 
+
+drop if (LOC_ST_RES==5)
+
+
  *defining a variable for Years since Immigration to Canada
-gen YIM=0
- 
+ gen YIM=0 
 label variable YIM "Number of years since Immigration"  
 
 replace YIM=(2011-1955) if (YRIMM==1)
@@ -228,14 +267,13 @@ replace YIM=(2011-2006) if (YRIMM==25)
 replace YIM=(2011-2007) if (YRIMM==26)
 replace YIM=(2011-2008) if (YRIMM==27)
 replace YIM=(2011-2009) if (YRIMM==28)
-replace YIM=(1) if (YRIMM==29) 
-replace YIM=0 if (YRIMM==31) 
+replace YIM=1 if (YRIMM==29) 
 tab YIM 
 drop if YRIMM==30
 
-*if a person is immigrant or nor
+*if a person is immigrant or not
 gen IMMG=0
-replace IMMG=1 if(YIM==0)
+replace IMMG=1 if(IMMSTAT==2|IMMSTAT==3)
 label variable IMMG "If a person is immigrant or not"
 label define immg 0 "Not immigrant" 1 "Immigrant"
 label values IMMG immg
@@ -249,6 +287,7 @@ label variable AGE15_17 "dummy variable if person's age b/w 15-17"
 label define age15 0 "Age not 15-17" 1 "Age b/w 15-17"
 label values AGE15_17 age15
 tab AGE15_17
+
  
 gen AGE18_19=0
 replace AGE18_19=1 if(AGEGRP==7)
@@ -321,7 +360,6 @@ drop if (inrange(AGEGRP,18,21))
 *Dropping unavailable data points of AGEGRP
 drop if AGEGRP==22
 
-
 *defining variable for person legally married or common law
 gen MARR=0
 replace MARR=1 if(MARSTH==2|MARSTH==3)
@@ -332,21 +370,8 @@ tab MARR
 
 
 
-*defining a variable for gender
-gen MALE=0
-replace MALE=1 if(SEX==2)
-label variable MALE "dummy variable if person's  Male or Female"
-label define male 0 "Female" 1 "Male"
-label values MALE male
-tab MALE
 
 
-
-
-
-
- 
- 
  
  
  
@@ -446,38 +471,162 @@ label define frn 0 "Doesn't use only French" 1 "Only French as official"
 label values FRN frn 
 tab FRN
 
-*dummy variable if person uses both English and French 
-gen FREN=0
-replace FREN=1 if (KOL==3)
-label variable FREN "People who can use both French and English as official"
-  
- *Regression model
-reg LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN FREN MALE MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17 YIM LOCED DEDUC HEDUC UEDUC A_DEDUC i.MVM##i.IMMG AB i.VMN##i.IMMG i.JP##i.IMMG i.KO##i.IMMG i.W_A##i.IMMG i.SE_A##i.IMMG i.ARB##i.IMMG i.LA##i.IMMG i.FLP##i.IMMG i.BL##i.IMMG i.CHI##i.IMMG i.S_A##i.IMMG  
 
-*Comments on regression results:
-  *Most interesting thing is that if education is from outside Canada our model predicts that on average wage will be 6% lower than if someone attained education from Canada. Our model predicts that Immigrant on average would have 9% higher wage than non-immigrants, I need to explore this a little more, since I expected otherwise. Black, WestAsian, Visible minority not elsewhere and South East asian minority group, immigrants had higher wages whereas other minorities appears to hace lower wages if they were immigrants. Additional year from immigration increases wage by 0.4% ( I need to correct this by adding c.YIM#c.YIM because I belive it's a decreasing function with time)
-  *Only NewBrunswick, Nova Scotia and Prince Edward Island had lower wages than BC (negative respective coefficients). Multiple visible minorities have higher 8.38% (MVM coeefcient=8.38%) higher wages than non-minorities. Japanese minority have 17.2% higher wages than non-minorities. Filipino minority group has 3.37% higher wages than non-minorities. All other minorities appear to have lower wages than non-minorities. There some concerns that I would like to look further into such are as My adjusted R-squared value is too low, although I not interested in overall fit.        
 
+
+
+
+
+*Defining variable for broad occupation categories:
+
+*Defining variable for Management occupation:
+gen MANG=0 
+replace MANG=1 if (NOCS==1)
+label variable MANG "People with management occupation"
+label define mang 0 "Person not in management" 1 "Person in Management"
+label values MANG mang 
+tab MANG
+
+
+*Defining variable for Business, finance and administrative occupations:
+gen BFA=0
+replace BFA=1 if (NOCS==2)
+label variable BFA "People with Business finance or Administration as occupation"
+label define bfa 0 "People not in Business finance or Administration" 1 "People in Business finance or Administration"
+label values BFA bfa 
+tab BFA
+
+*Defining variable for People in natural and applied sciences and related occupations:
+gen SCI=0 
+replace SCI=1 if (NOCS==3)
+label variable SCI "People with natural and applied sciences and related occupations"
+label define sci 0 "People not in Sciences occupation" 1 "Person in Sciences occupation"
+label values SCI sci
+tab SCI
+
+*Defining variable for People in Health occupations:
+gen HELT=0
+replace HELT=1 if(NOCS==4)
+label variable HELT "People in health Science sector"
+label define helt 0 "People not in Health Sector" 1 "Person with Health Science occupation"
+label values HELT helt
+tab HELT 
+
+*Defining variable for People with occupation in social science, education,government service and religion
+gen PUB=0
+replace PUB=1 if (NOCS==5)
+label variable PUB "If People with social science, education, gov't service or relion as occupation"
+label define pub 0 "person not in Social.sci and Public services sector" 1 "Person in Social.sci and Public services sector"
+label values PUB pub 
+tab PUB
+
+*Defining variable for People with occupation in Art, culture and sports:
+gen ACS=0 
+replace ACS=1 if(NOCS==6)
+label variable ACS "If people with occupation in Art, culture and sports"
+label define acs 0 "Person not in Art, culture and sports" 1 "Person works in Arts, culture and sports"
+label values ACS acs
+tab ACS
+
+*Defining variable for People with Sales and Service occupations
+gen SSO=0 
+replace SSO=1 if (NOCS==7)
+label variable SSO "if person in Sales and Services occupations"
+label define sso 0 "Person not in sales and services occupation" 1"Person in sales and services occupation"
+label values SSO sso
+tab SSO   
+
+*Define variable for People with Trades, transport and equipment operators and related occupations
+gen TTE=0
+replace TTE=1 if (NOCS==8)
+label variable TTE "If person in Trades, transport and equipment operator related occupation"
+label define tte 0 "Person not in trades, transport.. field" 1 "Person in trades, transport.. field"
+label values TTE tte
+tab TTE
+
+
+
+*Define variable for People with occupation unique to primary industry
+gen PRI=0
+replace PRI=1 if(NOCS==9)
+label variable PRI "If person has occupation unique to primary industry"
+label define pri 0 "Person not in industry unique work" 1 "Person in industry unique work"
+label values PRI pri
+
+*dropping not available and not applicable values
+drop if (NOCS==11|NOCS==12)
 *Summary of dependent and independent variables
-*sum ( NEWF PEI NS NB QB ONT MN SKW ALB LWAGE WAGE ENG FREN FRN MALE  MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17 YIM LOCED DEDUC HEDUC UEDUC A_DEDUC MVM AB VMN JP KO W_A SE_A ARB LA FLP BL CHI S_A)
 
-*comments for personal use in future:
- *Variable for sector of occupation up for consideration
-*NAICS
+sum ( WAGE LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN  MALE MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17 c.YIM##c.YIM LOCED DEDUC HEDUC UEDUC ADEDUC i.MVM##i.IMMG AB i.VMN##i.IMMG i.JP##i.IMMG i.KO##i.IMMG i.W_A##i.IMMG i.SE_A##i.IMMG i.ARB##i.IMMG i.LA##i.IMMG i.FLP##i.IMMG i.BL##i.IMMG i.CHI##i.IMMG i.S_A##i.IMMG  PRI TTE SSO ACS PUB HELT SCI BFA MANG)
 
 
+*4 decimal places as when some variables are converted into percentage 2 decimals seem a good idea.
+ set cformat %9.4f
+
+ 
+ 
+ 
+ 
+ *Regression model with all visible minorities as group without controlling for factors other than IMMG and Gender
+reg LWAGE MALE ALLVMIN IMMG
+
+reg LWAGE MALE i.ALLVMIN##i.IMMG
+ 
+ 
+
+ 
+*  Regression model
+
+reg LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN MALE MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17  c.YIM##c.YIM IMMG LOCED DEDUC HEDUC UEDUC ADEDUC MVM AB VMN JP KO  W_A SE_A ARB LA FLP BL CHI S_A  PRI TTE SSO ACS PUB HELT SCI BFA MANG
+
+ 
+reg LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN MALE MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17  c.YIM##c.YIM LOCED DEDUC HEDUC UEDUC ADEDUC i.MVM##i.IMMG AB i.VMN##i.IMMG i.JP##i.IMMG i.KO##i.IMMG i.W_A##i.IMMG i.SE_A##i.IMMG i.ARB##i.IMMG i.LA##i.IMMG i.FLP##i.IMMG i.BL##i.IMMG i.CHI##i.IMMG i.S_A##i.IMMG  PRI TTE SSO ACS PUB HELT SCI BFA MANG
+
+ *Location of educaation and IMMG  interaction
+reg LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN MALE MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17  c.YIM##c.YIM i.IMMG##LOCED DEDUC HEDUC UEDUC ADEDUC MVM AB VMN JP KO W_A SE_A ARB LA FLP BL CHI S_A  PRI TTE SSO ACS PUB HELT SCI BFA MANG
+
+ 
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+  *grouping for all minorities but aborginal and whites
+ gen VNNO=0
+ replace VNNO=1 if inrange(VISMIN,1,12)
+label variable VNNO "All ethnicities apart from white and Aborignal"
+label define vnno 0 "white nor aborginal" 1 "Not white or Aboriginal"
+label values VNNO vnno 
+ 
+ 
+ 
+* Further Exploring Aboriginal Ethnicity with education level
+ reg LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN  MALE MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17 c.YIM##c.YIM LOCED i.AB##i.DEDUC i.AB##i.HEDUC i.AB##i.UEDUC i.AB##i.ADEDUC i.VNNO##i.DEDUC i.VNNO##i.HEDUC i.VNNO##i.UEDUC i.VNNO##i.ADEDUC  PRI TTE SSO ACS PUB HELT SCI BFA MANG
+
+ 
+*grouping for all minorities but WA and whites
+gen NVM=0
+replace NVM=1 if(inrange(VISMIN,1,7)|inrange(VISMIN,9,12)|AB==1)
+label variable NVM "All ethnicities apart from white and West Asian"
+label define nvm 0 "white or West Asian" 1 "Not White nor West Asian"
+label values NVM nvm
+ 
+  *Further Exploring West Asian minorities Ethnicity with education level
+ reg LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN MALE MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17 c.YIM##c.YIM IMMG LOCED i.W_A##i.DEDUC i.W_A##i.HEDUC i.W_A##i.UEDUC i.W_A##i.ADEDUC  i.NVM##i.DEDUC i.NVM##i.HEDUC i.NVM##i.UEDUC i.NVM##i.ADEDUC  PRI TTE SSO ACS PUB HELT SCI BFA MANG
+
+
+ *I used eststo for storing regressions however not in this file
+ *esttab using table5.rtf, se nobaselevels label
+ 
+
+ 
 
 
 
-
-
-
-
-
-
-
-
-   
+  
 
 
 
