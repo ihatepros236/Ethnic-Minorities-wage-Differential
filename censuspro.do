@@ -560,6 +560,7 @@ drop if (NOCS==11|NOCS==12)
 sum ( WAGE LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN  MALE MARR AGE60_64 AGE55_59 AGE50_54 AGE45_49 AGE40_44  AGE30_34 AGE25_29 AGE20_24 AGE18_19 AGE15_17 c.YIM##c.YIM LOCED DEDUC HEDUC UEDUC ADEDUC i.MVM##i.IMMG AB i.VMN##i.IMMG i.JP##i.IMMG i.KO##i.IMMG i.W_A##i.IMMG i.SE_A##i.IMMG i.ARB##i.IMMG i.LA##i.IMMG i.FLP##i.IMMG i.BL##i.IMMG i.CHI##i.IMMG i.S_A##i.IMMG  PRI TTE SSO ACS PUB HELT SCI BFA MANG)
 
 
+<<<<<<< HEAD
 *4 decimal places as when some variables are converted into percentage 2 decimals seem a good idea.
  set cformat %9.4f
 
@@ -569,6 +570,9 @@ sum ( WAGE LWAGE NEWF PEI NS NB QB ONT MN SKW ALB ENG FRN  MALE MARR AGE60_64 AG
  
  *Regression model with all visible minorities as group without controlling for factors other than IMMG and Gender
 reg LWAGE MALE ALLVMIN IMMG
+=======
+**NEW
+>>>>>>> 365254caaa43135a34a07df4d45ed5e287c00a3f
 
 reg LWAGE MALE i.ALLVMIN##i.IMMG
  
